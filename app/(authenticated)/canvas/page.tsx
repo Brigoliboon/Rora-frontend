@@ -8,6 +8,8 @@ import Canvas from '@/components/sections/Canvas';
 import { useAuth } from '@/components/AuthProvider';
 import ThreeDCanvas from '@/components/sections/ThreeDCanvas';
 import { Button } from '@/components/ui/Button';
+import { RequestMannequin, RequestPattern } from '@/lib/models/fetchdata/FetchData';
+
 
 const sample_patterns = [
   'shirt_mean_pattern.svg',
@@ -20,7 +22,10 @@ export default function CanvasPage() {
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isLoading, setLoading] = useState(false)
-  const [sample, setSample] = useState('')
+
+  const [defaultMannequin, setDefaultMannequin] = useState('')
+  const [defaultPattern, setDefaultPattern] = useState<string>('')
+
   useEffect(() => {
 
     if (!token) return
@@ -28,25 +33,23 @@ export default function CanvasPage() {
     async function fetchData(){
       if (!token) return
 
-      const res = await fetch('api/pattern/sample', {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json',
-            },
-        })
-        const data = await res.json()
-        console.log(data)
-        setSample(data.svg_path)
+      try{
+        // const default_mannequin = await new RequestMannequin('front').getDefault(token)
+        const default_pattern = await new RequestPattern('front').getDefault(token)
+
+        // setDefaultMannequin(default_mannequin)
+        setDefaultPattern(default_pattern.svg_path || '')
+      } finally {
+        setLoading(false)
       }
-      // fetchData().then(() => {
-      //   setLoading(false)
-      // })
-      setLoading(false)
-  }, [user, loading])
+    }
+
+    fetchData()
+  }, [user, loading, defaultPattern])
 
   if (isLoading) return <></>
-  sample_patterns.push(sample)
+
+  if (defaultPattern)
   return (
     <div className="flex h-screen bg-gray-950">
       {/* Sidebar */}
@@ -68,7 +71,8 @@ export default function CanvasPage() {
       >
         <section className="w-[50%]">
           {/* Floating top container */}
-          <div className="absolute top">
+          <div className="absolute top justify-self-center">
+            <input type="text" name="garment" value={'Default Garment'} id="name" />
           </div>
           {/* Canvas Content */}
         <TransformWrapper
@@ -102,15 +106,16 @@ export default function CanvasPage() {
                   />
                   <Image
                     className="absolute ml-37 mt-30"
-                    src={sample_patterns[2]}
+                    src={defaultPattern}
                     width={500}
                     height={500}
                     alt="Picture of the author"
                   />
             </div>
           </TransformComponent>
-          <div className='absolute bottom-0'>
-            garment bottom
+          <div className='absolute bottom-0 flex gap-5 m-5 justify-self-center'>
+            <Button>Render</Button>
+            <Button variant='outline'>Save Design</Button>
           </div>
         </TransformWrapper>
         {/* Floating bottom container for first section */}
@@ -122,9 +127,8 @@ export default function CanvasPage() {
           </div>
           <ThreeDCanvas/>
           {/* Floating bottom container */}
-          <div className="absolute bottom-0 flex gap-2">
-            <Button>Render</Button>
-            <Button>Save Design</Button>
+          <div className="absolute bottom-0 flex gap-2 m-5 justify-self-center">
+            <Button>Save Model</Button>
           </div>
         </section>
       </main>
