@@ -1,16 +1,23 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo } from 'react';
 import HorizontalGallery from '../ui/HorizontalGallery';
 import Slider from '../ui/Slider';
 import CollapsibleSection from '../ui/CollapsibleSection';
+import { useSidebarValues } from '../../hooks/useSidebarValues';
 
-const SkirtSection: React.FC = () => {
-  const [length, setLength] = useState(50);
-  const [rise, setRise] = useState(50);
-  const [flare, setFlare] = useState(0);
-  const [ruffle, setRuffle] = useState(0);
-  const [slits, setSlits] = useState(0);
+interface SkirtSectionProps {
+  sidebarValues: ReturnType<typeof useSidebarValues>;
+}
+
+const SkirtSection: React.FC<SkirtSectionProps> = ({ sidebarValues }) => {
+  const { skirt, updateSkirtValue, updateValue } = sidebarValues;
+
+  const length = skirt?.length?.v ?? 0.2;
+  const rise = skirt?.rise?.v ?? 1;
+  const flare = skirt?.flare?.v ?? 0;
+  const ruffle = skirt?.ruffle?.v ?? 1.3;
+  const bottomCut = skirt?.bottom_cut?.v ?? 0;
 
   const skirtStyleOptions = [
     { id: 'circle', displayName: 'Circle', originalName: 'SkirtCircle' },
@@ -38,27 +45,103 @@ const SkirtSection: React.FC = () => {
     { id: 'siggraph', displayName: 'SIGGRAPH', originalName: 'SIGGRAPH_logo' },
   ];
 
+  // Convert YAML to UI ranges
+  // length: -0.2 to 0.95 -> 0-100
+  const lengthUI = useMemo(() => {
+    const min = -0.2, max = 0.95;
+    return ((length - min) / (max - min)) * 100;
+  }, [length]);
+
+  // rise: 0.5-1 -> 0-100
+  const riseUI = useMemo(() => {
+    const min = 0.5, max = 1;
+    return ((rise - min) / (max - min)) * 100;
+  }, [rise]);
+
+  // flare: 0-20 -> 0-100
+  const flareUI = useMemo(() => {
+    const min = 0, max = 20;
+    return ((flare - min) / (max - min)) * 100;
+  }, [flare]);
+
+  // ruffle: 1-2 -> 0-100
+  const ruffleUI = useMemo(() => {
+    const min = 1, max = 2;
+    return ((ruffle - min) / (max - min)) * 100;
+  }, [ruffle]);
+
+  // bottom_cut: 0-0.9 -> 0-100
+  const bottomCutUI = useMemo(() => {
+    const min = 0, max = 0.9;
+    return ((bottomCut - min) / (max - min)) * 100;
+  }, [bottomCut]);
+
+  const handleLengthChange = (uiValue: number) => {
+    const min = -0.2, max = 0.95;
+    const yamlValue = min + (uiValue / 100) * (max - min);
+    updateSkirtValue('length', yamlValue);
+  };
+
+  const handleRiseChange = (uiValue: number) => {
+    const min = 0.5, max = 1;
+    const yamlValue = min + (uiValue / 100) * (max - min);
+    updateSkirtValue('rise', yamlValue);
+  };
+
+  const handleFlareChange = (uiValue: number) => {
+    const min = 0, max = 20;
+    const yamlValue = min + (uiValue / 100) * (max - min);
+    updateSkirtValue('flare', Math.round(yamlValue));
+  };
+
+  const handleRuffleChange = (uiValue: number) => {
+    const min = 1, max = 2;
+    const yamlValue = min + (uiValue / 100) * (max - min);
+    updateSkirtValue('ruffle', yamlValue);
+  };
+
+  const handleBottomCutChange = (uiValue: number) => {
+    const min = 0, max = 0.9;
+    const yamlValue = min + (uiValue / 100) * (max - min);
+    updateSkirtValue('bottom_cut', yamlValue);
+  };
+
+  const handleSkirtStyleSelect = (option: { originalName: string }) => {
+    sidebarValues.updateSilhouetteValue('bottom', option.originalName);
+  };
+
+  const handlePanelCurveSelect = (option: { originalName: string }) => {
+    updateValue(['design', 'skirt-many-panels', 'panel_curve'], parseFloat(option.originalName));
+  };
+
+  const handleSideCutSelect = (option: { originalName: string }) => {
+    updateValue(['design', 'pencil-skirt', 'style_side_cut'], option.originalName);
+  };
+
   return (
     <div className="space-y-4">
       <div>
         <label className="block text-xs font-semibold text-gray-300 mb-2">
           Style
         </label>
-        <HorizontalGallery options={skirtStyleOptions} />
+        <HorizontalGallery 
+          options={skirtStyleOptions} 
+          onSelect={handleSkirtStyleSelect}
+        />
       </div>
 
       <Slider
         label="Length"
-        value={length}
-        onChange={setLength}
+        value={lengthUI}
+        onChange={handleLengthChange}
         min={0}
         max={100}
       />
 
       <Slider
         label="Rise"
-        value={rise}
-        onChange={setRise}
+        value={riseUI}
+        onChange={handleRiseChange}
         min={0}
         max={100}
       />
@@ -67,24 +150,24 @@ const SkirtSection: React.FC = () => {
         <div className="space-y-4">
           <Slider
             label="Flare"
-            value={flare}
-            onChange={setFlare}
-            min={-50}
-            max={50}
+            value={flareUI}
+            onChange={handleFlareChange}
+            min={0}
+            max={100}
           />
 
           <Slider
             label="Ruffle"
-            value={ruffle}
-            onChange={setRuffle}
+            value={ruffleUI}
+            onChange={handleRuffleChange}
             min={0}
             max={100}
           />
 
           <Slider
             label="Slits"
-            value={slits}
-            onChange={setSlits}
+            value={bottomCutUI}
+            onChange={handleBottomCutChange}
             min={0}
             max={100}
           />
@@ -93,14 +176,20 @@ const SkirtSection: React.FC = () => {
             <label className="block text-xs font-semibold text-gray-300 mb-2">
               Panel Curve
             </label>
-            <HorizontalGallery options={panelCurveOptions} />
+            <HorizontalGallery 
+              options={panelCurveOptions} 
+              onSelect={handlePanelCurveSelect}
+            />
           </div>
 
           <div>
             <label className="block text-xs font-semibold text-gray-300 mb-2">
               Side Cut
             </label>
-            <HorizontalGallery options={sideCutOptions} />
+            <HorizontalGallery 
+              options={sideCutOptions} 
+              onSelect={handleSideCutSelect}
+            />
           </div>
         </div>
       </CollapsibleSection>

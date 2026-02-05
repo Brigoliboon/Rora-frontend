@@ -1,18 +1,25 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import Toggle from '../ui/Toggle';
 import CollapsibleSection from '../ui/CollapsibleSection';
+import { useSidebarValues } from '../../hooks/useSidebarValues';
 
-const AsymmetrySection: React.FC = () => {
-  const [isEnabled, setIsEnabled] = useState(false);
+interface AsymmetrySectionProps {
+  sidebarValues: ReturnType<typeof useSidebarValues>;
+}
+
+const AsymmetrySection: React.FC<AsymmetrySectionProps> = ({ sidebarValues }) => {
+  const { asymmetry, updateAsymmetryValue } = sidebarValues;
+
+  const isEnabled = asymmetry?.enable_asym?.v ?? false;
 
   return (
     <div className="space-y-4">
       <Toggle
         label="Enable Asymmetry"
         value={isEnabled}
-        onChange={setIsEnabled}
+        onChange={(value) => updateAsymmetryValue('enable_asym', value)}
       />
 
       {isEnabled && (

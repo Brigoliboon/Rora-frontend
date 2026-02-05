@@ -23,7 +23,7 @@ import SleeveSection from './sidebar-sections/SleeveSection';
 import SkirtSection from './sidebar-sections/SkirtSection';
 import PantsSection from './sidebar-sections/PantsSection';
 import AsymmetrySection from './sidebar-sections/AsymmetrySection';
-import { Props } from 'next/script';
+import { useSidebarValues } from '../hooks/useSidebarValues';
 
 interface DesignEditorSidebarProps {
   isOpen: boolean;
@@ -34,6 +34,12 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
   isOpen,
   onToggle,
 }) => {
+  // Initialize the sidebar values hook
+  const sidebarValues = useSidebarValues({
+    yamlPath: '/samples/pencil_skirt/dress_pencil_body_measurements.yaml',
+    debounceMs: 500,
+  });
+
   const [expandedSections, setExpandedSections] = useState<
     Record<string, boolean>
   >({
@@ -58,43 +64,43 @@ const DesignEditorSidebar: React.FC<DesignEditorSidebarProps> = ({
       id: 'silhouette',
       title: 'SILHOUETTE',
       icon: <Palette size={18}/>,
-      component: <SilhouetteSection />,
+      component: <SilhouetteSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'shirt',
       title: 'SHIRT',
       icon: <Shirt size={18}/>,
-      component: <ShirtSection />,
+      component: <ShirtSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'collar',
       title: 'COLLAR & NECKLINE',
       icon: <Glasses size={18}/>,
-      component: <CollarSection />,
+      component: <CollarSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'sleeve',
       title: 'SLEEVES',
       icon: <Hand size={18}/>,
-      component: <SleeveSection />,
+      component: <SleeveSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'skirt',
       title: 'SKIRT',
       icon: <Shirt size={18}/>,
-      component: <SkirtSection />,
+      component: <SkirtSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'pants',
       title: 'PANTS',
       icon: '',
-      component: <PantsSection />,
+      component: <PantsSection sidebarValues={sidebarValues} />,
     },
     {
       id: 'asymmetry',
       title: 'ASYMMETRY',
       icon: <ArrowLeftRight size={18}/>,
-      component: <AsymmetrySection />,
+      component: <AsymmetrySection sidebarValues={sidebarValues} />,
     },
   ];
   return (
