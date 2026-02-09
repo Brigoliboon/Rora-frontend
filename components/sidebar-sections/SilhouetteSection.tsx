@@ -12,16 +12,19 @@ const SilhouetteSection: React.FC<SilhouetteSectionProps> = ({ sidebarValues }) 
   const { silhouette, updateSilhouetteValue } = sidebarValues;
 
   const upperOptions = [
+    { id: 'none', displayName: 'None', originalName: null },
     { id: 'fittedshirt', displayName: 'Fitted Shirt', originalName: 'FittedShirt' },
     { id: 'shirt', displayName: 'Shirt', originalName: 'Shirt' },
   ];
 
   const waistbandOptions = [
+    { id: 'none', displayName: 'None', originalName: null },
     { id: 'straightwb', displayName: 'Straight', originalName: 'StraightWB' },
     { id: 'fittedwb', displayName: 'Fitted', originalName: 'FittedWB' },
   ];
 
   const bottomOptions = [
+    { id: 'none', displayName: 'None', originalName: null },
     { id: 'skirtcircle', displayName: 'Circle', originalName: 'SkirtCircle' },
     { id: 'asymm', displayName: 'Asymmetric', originalName: 'AsymmSkirtCircle' },
     { id: 'godet', displayName: 'Godet', originalName: 'GodetSkirt' },
@@ -32,16 +35,16 @@ const SilhouetteSection: React.FC<SilhouetteSectionProps> = ({ sidebarValues }) 
     { id: 'levels', displayName: 'Levels', originalName: 'SkirtLevels' },
   ];
 
-  const handleUpperSelect = (option: { originalName: string }) => {
-    updateSilhouetteValue('upper', option.originalName);
+  const handleUpperSelect = (option: { id: string; displayName: string; originalName: string | null | undefined }) => {
+    updateSilhouetteValue('upper', option.originalName as string | null);
   };
 
-  const handleWaistbandSelect = (option: { originalName: string }) => {
-    updateSilhouetteValue('wb', option.originalName);
+  const handleWaistbandSelect = (option: { id: string; displayName: string; originalName: string | null | undefined }) => {
+    updateSilhouetteValue('wb', option.originalName as string | null);
   };
 
-  const handleBottomSelect = (option: { originalName: string }) => {
-    updateSilhouetteValue('bottom', option.originalName);
+  const handleBottomSelect = (option: { id: string; displayName: string; originalName: string | null | undefined }) => {
+    updateSilhouetteValue('bottom', option.originalName as string | null);
   };
 
   return (
