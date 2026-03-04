@@ -4,6 +4,50 @@ import * as yaml from 'js-yaml';
 import deepmerge from 'deepmerge';
 import { SidebarValues, SidebarPatch, mergeSidebarPayload } from '@/hooks/useSidebarValues';
 import defautData from '@/assets/samples/default.json'
+
+// Mannequin data types
+interface MannequinMeasurements {
+  bust: number;
+  hips: number;
+  waist: number;
+  wrist: number;
+  head_l: number;
+  height: number;
+  neck_w: number;
+  leg_circ: number;
+  bust_line: number;
+  hips_line: number;
+  underbust: number;
+  arm_length: number;
+  back_width: number;
+  bum_points: number;
+  shoulder_w: number;
+  waist_line: number;
+  bust_points: number;
+  armscye_depth: number;
+  shoulder_incl: number;
+  arm_pose_angle: number;
+  hip_back_width: number;
+  vert_bust_line: number;
+  crotch_hip_diff: number;
+  hip_inclination: number;
+  waist_back_width: number;
+  waist_over_bust_line: number;
+}
+
+interface MannequinData {
+  id: string;
+  user_id: string;
+  name?: string;
+  status: string;
+  generation_metadata: {
+    body_type?: string;
+    body: MannequinMeasurements;
+  };
+  created_at: string;
+  body_type: string;
+}
+
 interface CanvasContextType {
   patternURL: string | null;
   modelURL: string | null;
@@ -11,11 +55,13 @@ interface CanvasContextType {
   values: SidebarValues;
   loading: boolean;
   error: string | null;
+  mannequinData: MannequinData | null;
 
   setPatternURL: (value: string | null) => void;
   setModelURL: (value: string | null) => void;
   updateValue: (path: string[], value: unknown) => void;
-  loadYaml: (yamlPath: string, sessionToken?: string | null) => Promise<void>;
+  loadYaml: (yamlPath: string, sessionToken?: string | null, mannequinData?: any | null) => Promise<void>;
+  fetchMannequin: (id: string, sessionToken: string) => Promise<void>;
 }
 
 export const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
@@ -30,6 +76,7 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
   const [sidebarPatch, setSidebarPatch] = useState<SidebarPatch>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mannequinData, setMannequinData] = useState<MannequinData | null>(null);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const values = useMemo(() => mergeSidebarPayload(sidebarPatch), [sidebarPatch]);
@@ -47,10 +94,17 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
         if (sessionToken) {
           headers['Authorization'] = `Bearer ${sessionToken}`;
         }
+        
+        // Include mannequin_batch_uid in payload if mannequin data exists
+        const requestPayload = {
+          ...payload,
+          ...(mannequinData?.id && { mannequin_batch_uid: mannequinData.id })
+        };
+        
         const response = await fetch('/api/preview', {
           method: 'POST',
           headers,
-          body: JSON.stringify(payload),
+          body: JSON.stringify(requestPayload),
         });
 
         if (!response.ok) {
@@ -79,7 +133,7 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
     });
   }, [sendPreviewRequest]);
 
-  const loadYaml = useCallback(async (yamlPath: string, sessionToken?: string | null) => {
+  const loadYaml = useCallback(async (yamlPath: string, sessionToken?: string | null, mannequinData?: any | null) => {
     try {
       setLoading(true);
       setError(null);
@@ -94,9 +148,27 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
 
       const yamlText = await response.text();
       const parsed = yaml.load(yamlText) as SidebarPatch;
-      setSidebarPatch(parsed);
-      const merged = mergeSidebarPayload(parsed);
-      await sendPreviewRequest(merged, sessionToken);
+      
+      // If mannequinData is provided, merge its measurements into the body section
+      if (mannequinData?.generation_metadata?.body) {
+        const measurements = mannequinData.generation_metadata.body;
+        
+        // Create body patch from mannequin measurements
+        const bodyPatch: SidebarPatch = {
+          body: measurements
+        };
+        
+        // Merge the mannequin measurements with the YAML data
+        const mergedPatch = deepmerge(parsed, bodyPatch);
+        setSidebarPatch(mergedPatch);
+        const merged = mergeSidebarPayload(mergedPatch);
+        await sendPreviewRequest(merged, sessionToken);
+      } else {
+        // No mannequin data, use YAML as-is
+        setSidebarPatch(parsed);
+        const merged = mergeSidebarPayload(parsed);
+        await sendPreviewRequest(merged, sessionToken);
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load YAML file';
       setError(errorMessage);
@@ -106,6 +178,40 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
     }
   }, [sendPreviewRequest]);
 
+  const fetchMannequin = useCallback(async (id: string, sessionToken: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await fetch(`/api/mannequin/${id}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${sessionToken}`,
+          'Accept': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch mannequin: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('Fetched mannequin data:', data);
+      
+      // The API returns { data: { ... } }, so we need to unwrap it
+      if (data?.data) {
+        console.log(data)
+        setMannequinData(data.data);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch mannequin';
+      setError(errorMessage);
+      console.error('Error fetching mannequin:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return (
     <CanvasContext.Provider value={{
       patternURL,
@@ -114,10 +220,12 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
       values,
       loading,
       error,
+      mannequinData,
       setPatternURL,
       setModelURL,
       updateValue,
-      loadYaml
+      loadYaml,
+      fetchMannequin
     }}>
       {children}
     </CanvasContext.Provider>
