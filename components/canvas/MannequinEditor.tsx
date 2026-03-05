@@ -323,7 +323,7 @@ const MannequinEditor: React.FC<MannequinEditorProps> = (props) => {
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">
-                {isEditing ? 'Edit Mannequin' : isEditable ? 'Create Mannequin Model' : 'View Measurements'}
+                {isEditing ? 'Edit Mannequin' : isEditable ? 'Mannequin Model' : 'View Measurements'}
               </h2>
               <p className="text-xs text-[var(--foreground-muted)]">
                 {isEditable ? 'Adjust measurements to customize your model' : 'View mannequin measurements'}
