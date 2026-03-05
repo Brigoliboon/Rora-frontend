@@ -1,16 +1,17 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
-import { 
-  X, 
-  Save, 
-  RotateCcw, 
+import React, { useState, useCallback, useEffect } from 'react';
+import {
+  X,
+  Save,
+  RotateCcw,
   User,
   ChevronDown,
   ChevronRight,
   Ruler
 } from 'lucide-react';
 import dynamic from 'next/dynamic';
+import { useCanvas } from '@/hooks/useCanvas';
 
 // Dynamic import for ThreeDCanvas to avoid SSR issues
 const ThreeDCanvas = dynamic(() => import('@/components/sections/ThreeDCanvas'), {
@@ -30,7 +31,7 @@ interface BodyMeasurements {
   // General
   height: number;
   head_l: number;
-  
+
   // Upper Body
   bust: number;
   underbust: number;
@@ -43,7 +44,7 @@ interface BodyMeasurements {
   shoulder_incl: number;
   armscye_depth: number;
   neck_w: number;
-  
+
   // Lower Body
   waist: number;
   waist_line: number;
@@ -54,12 +55,25 @@ interface BodyMeasurements {
   hip_inclination: number;
   bum_points: number;
   crotch_hip_diff: number;
-  
+
   // Arms
   arm_length: number;
   arm_pose_angle: number;
   leg_circ: number;
   wrist: number;
+}
+
+interface MannequinData {
+  id: string;
+  user_id: string;
+  name?: string;
+  status: string;
+  generation_metadata: {
+    body_type?: string;
+    body: BodyMeasurements;
+  };
+  created_at: string;
+  body_type: string;
 }
 
 const defaultMeasurements: BodyMeasurements = {
@@ -139,22 +153,40 @@ const groupLabels: Record<string, string> = {
 interface MannequinEditorProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (name: string, measurements: BodyMeasurements) => void;
-  initialData?: { name: string; measurements: BodyMeasurements };
+  onSave: (name: string, gender: 'female' | 'male' | 'neutral', measurements: BodyMeasurements) => void;
+  initialData?: { name: string; gender: 'female' | 'male' | 'neutral'; measurements: BodyMeasurements };
   isEditing?: boolean;
+  isEditable?: boolean;
+  mannequinData?: MannequinData | null;
 }
 
-const MannequinEditor: React.FC<MannequinEditorProps> = ({ 
-  isOpen, 
-  onClose, 
-  onSave,
-  initialData,
-  isEditing = false
-}) => {
-  const [modelName, setModelName] = useState(initialData?.name || 'New Mannequin');
-  const [measurements, setMeasurements] = useState<BodyMeasurements>(
-    initialData?.measurements || defaultMeasurements
-  );
+const MannequinEditor: React.FC<MannequinEditorProps> = (props) => {
+  const { isOpen, onClose, onSave, initialData, mannequinData, isEditing = false, isEditable = true } = props;
+  
+  // Initialize measurements from mannequinData if available, otherwise use default
+  const getInitialMeasurements = (): BodyMeasurements => {
+    if (mannequinData?.generation_metadata?.body) {
+      return mannequinData.generation_metadata.body;
+    }
+    if (initialData?.measurements) {
+      return initialData.measurements;
+    }
+    return defaultMeasurements;
+  };
+  
+  // Use the mannequinData from props
+  console.log('Mannequin editor Loaded data: ', mannequinData)
+  const [modelName, setModelName] = useState(initialData?.name || mannequinData?.name || 'New Mannequin');
+  const [gender, setGender] = useState<'female' | 'male' | 'neutral'>(() => {
+    if (mannequinData?.generation_metadata?.body_type) {
+      return mannequinData.generation_metadata.body_type as 'female' | 'male' | 'neutral';
+    }
+    if (mannequinData?.body_type) {
+      return mannequinData.body_type as 'female' | 'male' | 'neutral';
+    }
+    return (initialData?.gender || 'female') as 'female' | 'male' | 'neutral';
+  });
+  const [measurements, setMeasurements] = useState<BodyMeasurements>(getInitialMeasurements);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     general: true,
     upperBody: true,
@@ -163,24 +195,110 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
   });
   const [isSaving, setIsSaving] = useState(false);
 
+  // Update measurements, name, and gender when mannequinData changes
+  useEffect(() => {
+    if (mannequinData) {
+      // Update name from mannequinData if available
+      if (mannequinData.name) {
+        setModelName(mannequinData.name);
+      }
+      
+      // Update gender from mannequinData if available
+      if (mannequinData.generation_metadata?.body_type) {
+        setGender(mannequinData.generation_metadata.body_type as 'female' | 'male' | 'neutral');
+      } else if (mannequinData.body_type) {
+        setGender(mannequinData.body_type as 'female' | 'male' | 'neutral');
+      }
+      
+      // Update measurements from mannequinData if available
+      if (mannequinData?.generation_metadata?.body) {
+        console.log('updating body');
+        console.log('new values: ', mannequinData.generation_metadata.body);
+        setMeasurements(mannequinData.generation_metadata.body);
+      }
+    }
+  }, [mannequinData]);
+
   const toggleGroup = (group: string) => {
     setExpandedGroups(prev => ({ ...prev, [group]: !prev[group] }));
   };
 
   const updateMeasurement = (key: keyof BodyMeasurements, value: number) => {
+    if (!isEditable) return;
     setMeasurements(prev => ({ ...prev, [key]: value }));
   };
 
   const handleSave = async () => {
+    if (!isEditable) return;
     setIsSaving(true);
-    // Simulate save delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    onSave(modelName, measurements);
-    setIsSaving(false);
-    onClose();
+    try {
+      // Map gender to body_type for backend
+      const bodyType = gender;
+
+      // Wrap measurements in "measurements" key as per backend structure
+      const payload = {
+        body_type: bodyType,
+        measurements: measurements
+      };
+
+      // Check if we have existing mannequin data
+      const isEditing = mannequinData && mannequinData.id;
+
+      let response;
+      if (isEditing) {
+        // Use PATCH for existing data - include name and measurements
+        const updatePayload = {
+          name: modelName,
+          body_type: bodyType,
+          generation_metadata: {
+            body_type: bodyType,
+            body: measurements
+          }
+        };
+
+        response = await fetch(`/api/mannequin/${mannequinData.id}`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updatePayload),
+        });
+      } else {
+        // Use POST for new data - include name in the payload
+        const createPayload = {
+          ...payload,
+          name: modelName
+        };
+
+        response = await fetch('/api/mannequin', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createPayload),
+        });
+      }
+
+      if (!response.ok) {
+        throw new Error('Failed to save mannequin');
+      }
+
+      const result = await response.json();
+      console.log('Mannequin saved successfully:', result);
+
+      onSave(modelName, gender, measurements);
+      onClose();
+    } catch (error) {
+      console.error('Error saving mannequin:', error);
+      // In a real app, we'd show a toast error notification here
+      alert('Failed to save mannequin model. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleReset = () => {
+    if (!isEditable) return;
     setMeasurements(defaultMeasurements);
   };
 
@@ -189,37 +307,40 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div 
+      <div
         className="absolute inset-0 bg-black/80 backdrop-blur-sm"
         onClick={onClose}
       />
-      
+
       {/* Modal */}
       <div className="relative w-full max-w-6xl h-[90vh] bg-[#0a0f1a] rounded-2xl border border-[rgba(148,163,184,0.2)] shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[rgba(148,163,184,0.1)]">
+          {measurements.height}
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-500 flex items-center justify-center">
               <User className="w-5 h-5 text-white" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-white">
-                {isEditing ? 'Edit Mannequin' : 'Create Mannequin Model'}
+                {isEditing ? 'Edit Mannequin' : isEditable ? 'Create Mannequin Model' : 'View Measurements'}
               </h2>
               <p className="text-xs text-[var(--foreground-muted)]">
-                Adjust measurements to customize your model
+                {isEditable ? 'Adjust measurements to customize your model' : 'View mannequin measurements'}
               </p>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <button
-              onClick={handleReset}
-              className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--foreground-muted)] hover:text-white hover:bg-[rgba(148,163,184,0.1)] transition-colors"
-            >
-              <RotateCcw className="w-4 h-4" />
-              Reset to Default
-            </button>
+            {isEditable && (
+              <button
+                onClick={handleReset}
+                className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[var(--foreground-muted)] hover:text-white hover:bg-[rgba(148,163,184,0.1)] transition-colors"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Reset to Default
+              </button>
+            )}
             <button
               onClick={onClose}
               className="p-2 rounded-lg hover:bg-[rgba(148,163,184,0.1)] transition-colors"
@@ -235,7 +356,7 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
           <div className="w-1/2 border-r border-[rgba(148,163,184,0.1)] relative bg-gradient-to-b from-[#0f172a] to-[#0a0f1a]">
             {/* Aurora backdrop effect */}
             <div className="absolute inset-0 opacity-30">
-              <div 
+              <div
                 className="absolute inset-0"
                 style={{
                   background: `
@@ -245,12 +366,12 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
                 }}
               />
             </div>
-            
+
             {/* 3D Canvas */}
             <div className="absolute inset-0">
               <ThreeDCanvas model="/samples/mannequin/mean_all.obj" />
             </div>
-            
+
             {/* Quick stats overlay */}
             <div className="absolute bottom-4 left-4 right-4 flex justify-center gap-6 text-xs z-10">
               <div className="px-3 py-1.5 rounded-lg bg-[rgba(10,15,26,0.8)] border border-[rgba(148,163,184,0.2)] backdrop-blur-sm">
@@ -275,18 +396,72 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
           {/* Right Panel - Measurements */}
           <div className="w-1/2 overflow-y-auto">
             <div className="p-6 space-y-6">
-              {/* Model Name Input */}
-              <div>
-                <label className="block text-sm font-medium text-white mb-2">
-                  Model Name
-                </label>
-                <input
-                  type="text"
-                  value={modelName}
-                  onChange={(e) => setModelName(e.target.value)}
-                  className="w-full px-4 py-2 rounded-xl bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)] text-white placeholder-[var(--foreground-muted)] focus:border-teal-500/50 focus:outline-none transition-colors"
-                  placeholder="Enter model name..."
-                />
+              <div className="grid grid-cols-2 gap-6">
+                {/* Model Name Input */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Model Name
+                  </label>
+                  <input
+                    type="text"
+                    value={modelName}
+                    onChange={(e) => isEditable && setModelName(e.target.value)}
+                    disabled={!isEditable}
+                    className={`w-full px-4 py-2 rounded-xl bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)] text-white placeholder-[var(--foreground-muted)] focus:border-teal-500/50 focus:outline-none transition-colors ${!isEditable ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    placeholder="Enter model name..."
+                  />
+                </div>
+
+                {/* Gender Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-white mb-2">
+                    Model Type
+                  </label>
+                  <div className="flex p-1 rounded-xl bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)]">
+                    <button
+                      onClick={() => isEditable && setGender('female')}
+                      disabled={!isEditable}
+                      className={`
+                        flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-medium transition-all
+                        ${gender === 'female'
+                          ? 'bg-teal-500 text-white shadow-lg'
+                          : 'text-[var(--foreground-muted)] hover:text-white'
+                        }
+                        ${!isEditable ? 'opacity-60 cursor-not-allowed' : ''}
+                      `}
+                    >
+                      Female
+                    </button>
+                    <button
+                      onClick={() => isEditable && setGender('male')}
+                      disabled={!isEditable}
+                      className={`
+                        flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-medium transition-all
+                        ${gender === 'male'
+                          ? 'bg-teal-500 text-white shadow-lg'
+                          : 'text-[var(--foreground-muted)] hover:text-white'
+                        }
+                        ${!isEditable ? 'opacity-60 cursor-not-allowed' : ''}
+                      `}
+                    >
+                      Male
+                    </button>
+                    <button
+                      onClick={() => isEditable && setGender('neutral')}
+                      disabled={!isEditable}
+                      className={`
+                        flex-1 flex items-center justify-center gap-2 py-1.5 rounded-lg text-sm font-medium transition-all
+                        ${gender === 'neutral'
+                          ? 'bg-teal-500 text-white shadow-lg'
+                          : 'text-[var(--foreground-muted)] hover:text-white'
+                        }
+                        ${!isEditable ? 'opacity-60 cursor-not-allowed' : ''}
+                      `}
+                    >
+                      Neutral
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* Measurement Groups */}
@@ -311,7 +486,7 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
                       <ChevronRight className="w-4 h-4 text-[var(--foreground-muted)]" />
                     )}
                   </button>
-                  
+
                   {expandedGroups[groupKey] && (
                     <div className="p-4 space-y-3">
                       {keys.map((key) => (
@@ -324,8 +499,9 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
                               type="number"
                               value={measurements[key as keyof BodyMeasurements].toFixed(2)}
                               onChange={(e) => updateMeasurement(key as keyof BodyMeasurements, parseFloat(e.target.value))}
+                              disabled={!isEditable}
                               step="0.1"
-                              className="w-24 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)] text-white text-sm text-right focus:border-teal-500/50 focus:outline-none transition-colors"
+                              className={`w-24 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)] text-white text-sm text-right focus:border-teal-500/50 focus:outline-none transition-colors ${!isEditable ? 'opacity-60 cursor-not-allowed' : ''}`}
                             />
                             <span className="text-xs text-[var(--foreground-muted)] w-8">
                               {key.includes('angle') || key.includes('incl') ? '°' : 'cm'}
@@ -351,16 +527,18 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-lg text-sm text-[var(--foreground-muted)] hover:text-white transition-colors"
             >
-              Cancel
+              {isEditable ? 'Cancel' : 'Close'}
             </button>
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !modelName.trim()}
-              className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Save className="w-4 h-4" />
-              {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Model')}
-            </button>
+            {isEditable && (
+              <button
+                onClick={handleSave}
+                disabled={isSaving || !modelName.trim()}
+                className="flex items-center gap-2 px-6 py-2 rounded-lg bg-gradient-to-r from-teal-500 to-cyan-500 text-white text-sm font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? 'Saving...' : (isEditing ? 'Save Changes' : 'Save Model')}
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -369,4 +547,4 @@ const MannequinEditor: React.FC<MannequinEditorProps> = ({
 };
 
 export default MannequinEditor;
-export type { BodyMeasurements };
+export type { BodyMeasurements, MannequinData };
