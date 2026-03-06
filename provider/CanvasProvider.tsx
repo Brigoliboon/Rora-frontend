@@ -37,7 +37,7 @@ interface MannequinMeasurements {
 
 interface MannequinData {
   id: string;
-  user_id: string;
+  user_id: string;  
   name?: string;
   status: string;
   generation_metadata: {
@@ -62,6 +62,7 @@ interface CanvasContextType {
   updateValue: (path: string[], value: unknown) => void;
   loadYaml: (yamlPath: string, sessionToken?: string | null, mannequinData?: any | null) => Promise<void>;
   fetchMannequin: (id: string, sessionToken: string) => Promise<void>;
+  savePattern: (name: string, sessionToken: string) => Promise<{ status: string; message: string; garment_batch_uuid?: string } | null>;
 }
 
 export const CanvasContext = createContext<CanvasContextType | undefined>(undefined);
@@ -94,7 +95,7 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
         if (sessionToken) {
           headers['Authorization'] = `Bearer ${sessionToken}`;
         }
-        
+        console.debug('canvas data: ', mannequinData)
         // Include mannequin_batch_uid in payload if mannequin data exists
         const requestPayload = {
           ...payload,
@@ -183,6 +184,7 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
       setLoading(true);
       setError(null);
 
+      console.debug('fetching mannequin from canvas hook')
       const response = await fetch(`/api/mannequin/${id}`, {
         method: 'GET',
         headers: {
@@ -196,11 +198,11 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
       }
 
       const data = await response.json();
-      console.log('Fetched mannequin data:', data);
+      console.debug('Fetched mannequin data:', data);
       
       // The API returns { data: { ... } }, so we need to unwrap it
       if (data?.data) {
-        console.log(data)
+        console.debug('setting mannequin data')
         setMannequinData(data.data);
       }
     } catch (err) {
@@ -211,6 +213,48 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
       setLoading(false);
     }
   }, []);
+
+  const savePattern = useCallback(async (name: string, sessionToken: string) => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // Prepare the payload in the format expected by the backend
+      // Backend expects: { designs: [{ name: string, design: {...}}], ... }
+      const payload = {
+        designs: [{ name: name, design: values }],
+        ...(mannequinData?.id && { mannequin_batch_uid: mannequinData.id })
+      };
+
+      console.debug('Saving pattern with payload:', payload);
+
+      const response = await fetch('/api/pattern', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken}`,
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Failed to save pattern: ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('Pattern saved successfully:', data);
+      return data;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to save pattern';
+      setError(errorMessage);
+      console.error('Error saving pattern:', err);
+      return null;
+    } finally {
+      setLoading(false);
+    }
+  }, [values, mannequinData]);
 
   return (
     <CanvasContext.Provider value={{
@@ -225,7 +269,8 @@ export function CanvasProvider({ children }: CanvasProviderProps) {
       setModelURL,
       updateValue,
       loadYaml,
-      fetchMannequin
+      fetchMannequin,
+      savePattern
     }}>
       {children}
     </CanvasContext.Provider>

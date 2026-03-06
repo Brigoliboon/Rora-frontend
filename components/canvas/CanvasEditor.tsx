@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/Button';
 import { PanelLeftClose, PanelRightClose, Settings, Save, Play, FileDown, Ruler } from 'lucide-react';
 import MannequinEditor from './MannequinEditor';
 import { useCanvas } from '@/hooks/useCanvas';
+import { useAuth } from '@/components/AuthProvider';
 
 interface MeasurementData {
     body_type: string;
@@ -49,10 +50,36 @@ export default function CanvasEditor({
     const [paneRatio, setPaneRatio] = useState(70); // 2D pattern width percentage
     const [isMannequinEditorOpen, setIsMannequinEditorOpen] = useState(false);
 
+    const { savePattern } = useCanvas();
+    const { token: authToken } = useAuth();
+
     const toggle3DPane = () => {
         if (!is3DEnabled) return;
         setIs3DPaneVisible(!is3DPaneVisible);
         setPaneRatio(is3DPaneVisible ? 95 : 70);
+    };
+
+    const handleSave = async () => {
+        if (!authToken) {
+            console.error('No auth token available');
+            return;
+        }
+        
+        // Generate a default name based on current timestamp
+        const patternName = `Pattern_${new Date().toISOString().slice(0, 10)}`;
+        
+        try {
+            const result = await savePattern(patternName, authToken);
+            if (result && result.status === 'success') {
+                console.log('Pattern saved successfully:', result);
+                // Call the onSave callback if provided
+                if (onSave) {
+                    onSave();
+                }
+            }
+        } catch (error) {
+            console.error('Error saving pattern:', error);
+        }
     };
 
     return (
@@ -73,68 +100,19 @@ export default function CanvasEditor({
                     }} />
             </div>
 
-            {/* Top Command Bar */}
+            {/* Top Command Bar - Minimal header */}
             <div className="relative z-20 bg-[#0a0f1a]/80 backdrop-blur-xl border-b border-[rgba(148,163,184,0.1)] flex-shrink-0">
-                <div className="flex items-center justify-between px-6 py-3">
-                    {/* Left side - Controls */}
-                    <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            Auto-saved
-                        </div>
-
-                        {/* 3D Pane Toggle */}
-                        {is3DEnabled && (
-                            <button
-                                onClick={toggle3DPane}
-                                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[rgba(148,163,184,0.1)] border border-[rgba(148,163,184,0.2)] hover:border-teal-500/40 transition-all duration-300"
-                            >
-                                {is3DPaneVisible ? <PanelRightClose className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
-                                <span className="text-xs text-[var(--foreground-muted)]">
-                                    {is3DPaneVisible ? 'Hide 3D' : 'Show 3D'}
-                                </span>
-                            </button>
-                        )}
-
-                        {isMeasurementsEnabled && (
-                            <>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Settings className="w-4 h-4" />
-                                    Measurements
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => setIsMannequinEditorOpen(true)}
-                                    className="flex items-center gap-2"
-                                >
-                                    <Ruler className="w-4 h-4" />
-                                    View Measurements
-                                </Button>
-                            </>
-                        )}
+                <div className="flex items-center justify-end px-6 py-3 gap-4">
+                    {/* Auto-saved indicator */}
+                    <div className="flex items-center gap-2 text-xs text-[var(--foreground-muted)]">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                        Auto-saved
                     </div>
-
-                    {/* Right side - Pattern actions */}
-                    <div className="flex items-center gap-3">
-                        <Button variant="glow" size="sm" className="flex items-center gap-2" onClick={onRender}>
-                            <Play className="w-4 h-4" />
-                            Render Pattern
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={onSave}>
-                            <Save className="w-4 h-4" />
-                            Save Pattern
-                        </Button>
-                        <Button variant="outline" size="sm" className="flex items-center gap-2">
-                            <FileDown className="w-4 h-4" />
-                            Export to PDF
-                        </Button>
-                    </div>
+                    {/* Export to PDF - stays in header */}
+                    <Button variant="outline" size="sm" className="flex items-center gap-2">
+                        <FileDown className="w-4 h-4" />
+                        Export to PDF
+                    </Button>
                 </div>
             </div>
 
@@ -146,6 +124,7 @@ export default function CanvasEditor({
                         isOpen={isSidebarOpen}
                         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
                         sessionToken={token || ''}
+                        mannequinData={mannequinData}
                     />
                 )}
 
@@ -163,6 +142,57 @@ export default function CanvasEditor({
                         }}
                     />
 
+                    {/* Right Side Controls Panel */}
+                    <div className="absolute top-4 right-4 z-30 flex flex-col gap-3">
+                        {/* 3D Pane Toggle */}
+                        {is3DEnabled && (
+                            <button
+                                onClick={toggle3DPane}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg bg-[#0a0f1a]/80 backdrop-blur-sm border border-[rgba(148,163,184,0.2)] hover:border-teal-500/40 transition-all duration-300"
+                            >
+                                {is3DPaneVisible ? <PanelRightClose className="w-4 h-4" /> : <PanelLeftClose className="w-4 h-4" />}
+                                <span className="text-xs text-[var(--foreground-muted)]">
+                                    {is3DPaneVisible ? 'Hide 3D' : 'Show 3D'}
+                                </span>
+                            </button>
+                        )}
+
+                        {isMeasurementsEnabled && (
+                            <>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                                    className="flex items-center gap-2 bg-[#0a0f1a]/80 backdrop-blur-sm"
+                                >
+                                    <Settings className="w-4 h-4" />
+                                    Garment Design
+                                </Button>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsMannequinEditorOpen(true)}
+                                    className="flex items-center gap-2 bg-[#0a0f1a]/80 backdrop-blur-sm"
+                                >
+                                    <Ruler className="w-4 h-4" />
+                                    View Measurements
+                                </Button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Floating Bottom Controls - Centered */}
+                    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-30 flex items-center gap-3">
+                        <Button variant="glow" size="sm" className="flex items-center gap-2" onClick={onRender}>
+                            <Play className="w-4 h-4" />
+                            Render Pattern
+                        </Button>
+                        <Button variant="outline" size="sm" className="flex items-center gap-2" onClick={handleSave}>
+                            <Save className="w-4 h-4" />
+                            Save Pattern
+                        </Button>
+                    </div>
+
                     <TransformWrapper
                         initialScale={1}
                         initialPositionX={0}
@@ -178,13 +208,13 @@ export default function CanvasEditor({
                         >
                             <div className="w-full h-full flex justify-center relative p-8">
                                 {/* Model Outline - subtle reference */}
-                                <Image
+                                {/* <Image
                                     className="absolute opacity-15 pointer-events-none max-w-[90%] max-h-[90%] object-contain"
                                     src="/model_outline.svg"
                                     width={500}
                                     height={500}
                                     alt="model outline"
-                                />
+                                /> */}
 
                                 {/* 2D Garment Pattern - Primary Focus */}
                                 {patternURL && (

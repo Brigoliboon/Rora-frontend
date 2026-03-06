@@ -371,6 +371,8 @@ interface UseSidebarValuesOptions {
   debounceMs?: number;
   /** Optional session token for /api/preview Authorization header */
   sessionToken?: string | null;
+  /** Mannequin data containing body measurements to merge into the YAML */
+  mannequinData?: any;
 }
 
 /**
@@ -400,18 +402,22 @@ export function useSidebarValues(options: UseSidebarValuesOptions = {
   const {
     yamlPath = '/samples/pencil_skirt/dress_pencil_body_measurements.yaml',
     sessionToken = null,
+    mannequinData = null,
   } = options;
 
-  const { values, updateValue, loadYaml, loading, error } = useCanvas();
+  const { values, updateValue, loadYaml, loading, error, mannequinData: canvasMannequinData } = useCanvas();
   const { token: authToken } = useAuth();
 
   // Use auth token if no sessionToken provided
   const effectiveToken = sessionToken || authToken;
 
-  // Load YAML on mount
+  // Use mannequinData from props or from canvas context
+  const effectiveMannequinData = mannequinData || canvasMannequinData;
+
+  // Load YAML on mount or when mannequinData changes
   useEffect(() => {
-    loadYaml(yamlPath, effectiveToken);
-  }, [yamlPath, effectiveToken, loadYaml]);
+    loadYaml(yamlPath, effectiveToken, effectiveMannequinData);
+  }, [yamlPath, effectiveToken, effectiveMannequinData, loadYaml]);
 
   // Helper functions for common updates
   const updateShirtValue = useCallback((key: string, value: any) => {

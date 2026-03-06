@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Plus, Layers, Wand2 } from 'lucide-react';
+import { Plus, Clock, Star } from 'lucide-react';
 import Link from 'next/link';
 
 interface QuickAction {
@@ -29,20 +29,20 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
       auroraGradient: 'from-teal-500 to-cyan-500',
     },
     {
-      id: 'preset',
-      label: 'From Preset',
-      description: 'Use a template',
-      icon: Layers,
-      href: '/canvas/new?preset=true',
-      auroraGradient: 'from-cyan-500 to-blue-500',
+      id: 'recents',
+      label: 'Recents',
+      description: 'Continue editing',
+      icon: Clock,
+      href: '/canvas/my-designs',
+      auroraGradient: 'from-violet-500 to-purple-500',
     },
     {
-      id: 'ai',
-      label: 'AI Generate',
-      description: 'Describe to create',
-      icon: Wand2,
-      href: '/canvas/new?ai=true',
-      auroraGradient: 'from-purple-500 to-pink-500',
+      id: 'favorites',
+      label: 'Favorites',
+      description: 'saved designs',
+      icon: Star,
+      href: '/canvas/favorites',
+      auroraGradient: 'from-amber-400 to-orange-500',
     },
   ];
 
@@ -51,7 +51,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
       <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
         {quickActions.map((action) => {
           const Icon = action.icon;
-          
+
           const content = (
             <div className={`
               relative flex items-center gap-4 px-6 py-4 rounded-2xl
@@ -65,7 +65,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
                 absolute inset-0 bg-gradient-to-r ${action.auroraGradient} opacity-0 
                 transition-opacity duration-500 group-hover:opacity-5
               `} />
-              
+
               {/* Icon container */}
               <div className={`
                 relative w-12 h-12 rounded-xl flex items-center justify-center
@@ -76,13 +76,13 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
               `}>
                 <Icon className={"w-5 h-5 text-white"} />
               </div>
-              
+
               {/* Text content */}
               <div className="relative">
                 <h3 className="text-white font-semibold text-sm">{action.label}</h3>
                 <p className="text-[var(--foreground-muted)] text-xs">{action.description}</p>
               </div>
-              
+
               {/* Arrow indicator */}
               <div className="relative ml-2 w-6 h-6 rounded-full bg-[rgba(148,163,184,0.1)] 
                             flex items-center justify-center opacity-0 group-hover:opacity-100 
@@ -91,7 +91,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
               </div>
             </div>
           );
-          
+
           if (action.onClick) {
             return (
               <button
@@ -103,7 +103,7 @@ const QuickActions: React.FC<QuickActionsProps> = ({ onCreateCanvas }) => {
               </button>
             );
           }
-          
+
           return (
             <Link
               key={action.id}

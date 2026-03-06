@@ -4,18 +4,21 @@ import React, { useState } from 'react';
 import CanvasSidebar from '@/components/canvas/CanvasSidebar';
 import CanvasHeader from '@/components/canvas/CanvasHeader';
 import QuickActions from '@/components/canvas/QuickActions';
-import CreateNewSection from '@/components/canvas/CreateNewSection';
+import CommunityPresets from '@/components/canvas/CommunityPresets';
 import RecentDesigns from '@/components/canvas/RecentDesigns';
+
 import ModelsView from '@/components/canvas/ModelsView';
 import MannequinEditor, { BodyMeasurements } from '@/components/canvas/MannequinEditor';
 import CreateCanvasOverlay from '@/components/canvas/CreateCanvasOverlay';
+import { useAuth } from '@/components/AuthProvider';
 
 
 export default function Page() {
+  const { token } = useAuth();
   const [activeCategory, setActiveCategory] = useState('for-you');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [isCreateOverlayOpen, setIsCreateOverlayOpen] = useState(false);
-  const [editingModel, setEditingModel] = useState<{ name: string; measurements: BodyMeasurements } | undefined>(undefined);
+  const [editingModel, setEditingModel] = useState<{ name: string; gender: 'woman' | 'man'; measurements: BodyMeasurements } | undefined>(undefined);
 
   const handleCreateNew = () => {
     setEditingModel(undefined);
@@ -30,13 +33,14 @@ export default function Page() {
   const handleEditModel = (model: any) => {
     setEditingModel({
       name: model.name,
+      gender: model.gender || 'woman',
       measurements: model.measurements
     });
     setIsEditorOpen(true);
   };
 
-  const handleSaveModel = (name: string, measurements: BodyMeasurements) => {
-    console.log('Saving model:', { name, measurements });
+  const handleSaveModel = (name: string, gender: 'woman' | 'man', measurements: BodyMeasurements) => {
+    console.log('Saving model:', { name, gender, measurements });
     // TODO: Implement save functionality
   };
 
@@ -45,13 +49,14 @@ export default function Page() {
     // TODO: Implement model selection for garment design
   };
 
+  if (!token) return;
   return (
 
     <div className="min-h-screen bg-[var(--background)] aurora-bg">
       {/* Sidebar */}
-      <CanvasSidebar 
-        activeCategory={activeCategory} 
-        onCategoryChange={setActiveCategory} 
+      <CanvasSidebar
+        activeCategory={activeCategory}
+        onCategoryChange={setActiveCategory}
       />
 
       {/* Main Content */}
@@ -67,8 +72,9 @@ export default function Page() {
           {/* Divider */}
           <div className="h-px bg-gradient-to-r from-transparent via-[rgba(148,163,184,0.2)] to-transparent my-8" />
 
-          {/* Create New Section */}
-          <CreateNewSection onCreateMannequin={handleCreateNew} />
+          {/* Community Presets Section */}
+          <CommunityPresets token={token} />
+
 
           {/* Divider */}
           <div className="h-px bg-gradient-to-r from-transparent via-[rgba(148,163,184,0.2)] to-transparent my-8" />
@@ -82,7 +88,7 @@ export default function Page() {
       {activeCategory === 'my-models' && (
         <main className="ml-64 min-h-screen">
           <div className="max-w-6xl mx-auto px-8 py-12">
-            <ModelsView 
+            <ModelsView
               onCreateNew={handleCreateNew}
               onEditModel={handleEditModel}
               onSelectModel={handleSelectModel}
@@ -95,6 +101,7 @@ export default function Page() {
       <CreateCanvasOverlay
         isOpen={isCreateOverlayOpen}
         onClose={() => setIsCreateOverlayOpen(false)}
+        onCreateModel={handleCreateNew}
       />
 
       {/* Mannequin Editor Overlay */}

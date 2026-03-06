@@ -3,11 +3,13 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
-import { Loader2 } from 'lucide-react' // Optional: install lucide-react for icons, or replace with SVG
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 export default function SignupPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [name, setName] = useState('')
   const [birthday, setBirthday] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,24 +38,43 @@ export default function SignupPage() {
       setError(error.message)
       setLoading(false)
     } else {
-      // After successful sign‑up, redirect to dashboard or verification page
       router.push('/dashboard')
       router.refresh()
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-neutral-950 px-4 transition-colors duration-300">
-      <div className="w-full max-w-sm space-y-8 bg-white dark:bg-neutral-900 p-8 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm dark:shadow-none">
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Create Account</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Sign up to start using the app</p>
-        </div>
-        <form onSubmit={handleSignup} className="mt-8 space-y-6">
-          <div className="space-y-5">
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      {/* Animated gradient background */}
+      <div className="fixed inset-0 -z-10 rora-animated-bg" />
+
+      {/* Signup Card */}
+      <div className="w-full max-w-md">
+        <div className="bg-[#0a0f1a]/90 backdrop-blur-sm rounded-2xl border border-[#1e293b] p-8 sm:p-10">
+          
+          {/* Header */}
+          <div className="text-center space-y-3 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#f1f5f9]">
+              Create Account
+            </h2>
+            <p className="text-sm text-[#94a3b8]">
+              Sign up to start creating
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-[#7f1d1d]/20 border border-[#dc2626]/30 p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#dc2626] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[#fca5a5]">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleSignup} className="space-y-5">
             {/* Name */}
-            <div>
-              <label htmlFor="name" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+            <div className="space-y-2">
+              <label htmlFor="name" className="block text-sm font-medium text-[#94a3b8]">
                 Full Name
               </label>
               <input
@@ -63,13 +84,14 @@ export default function SignupPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300"
                 placeholder="John Doe"
               />
             </div>
+
             {/* Birthday */}
-            <div>
-              <label htmlFor="birthday" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+            <div className="space-y-2">
+              <label htmlFor="birthday" className="block text-sm font-medium text-[#94a3b8]">
                 Birthday
               </label>
               <input
@@ -79,13 +101,14 @@ export default function SignupPage() {
                 required
                 value={birthday}
                 onChange={(e) => setBirthday(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300"
               />
             </div>
+
             {/* Email */}
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-                Email
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium text-[#94a3b8]">
+                Email address
               </label>
               <input
                 id="email"
@@ -95,50 +118,79 @@ export default function SignupPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300"
                 placeholder="name@example.com"
               />
             </div>
+
             {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+            <div className="space-y-2">
+              <label htmlFor="password" className="block text-sm font-medium text-[#94a3b8]">
                 Password
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="new-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
-                placeholder="••••••••"
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="new-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300 pr-12"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#94a3b8] transition-colors p-1"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
-          {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          )}
-          <div>
-            <button
+
+            {/* Submit Button */}
+            <Button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-gray-900 dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 dark:focus:ring-white disabled:opacity-50 transition-all duration-200"
+              variant="primary"
+              size="lg"
+              className="w-full"
             >
               {loading ? (
                 <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
-                  Signing up...
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
+                  Creating account...
                 </>
               ) : (
                 'Create Account'
               )}
-            </button>
+            </Button>
+          </form>
+
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#1e293b]" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-[#0a0f1a]/90 text-[#64748b]">or</span>
+            </div>
           </div>
-        </form>
+
+          {/* Sign in Link */}
+          <div className="text-center text-sm text-[#94a3b8]">
+            <span>Already have an account? </span>
+            <a href="/login" className="font-medium text-[#f1f5f9] hover:text-[#14b8a6] transition-colors">
+              Sign in
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   )

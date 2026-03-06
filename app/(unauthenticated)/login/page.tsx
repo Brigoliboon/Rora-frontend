@@ -3,11 +3,14 @@
 import { useState } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { useRouter } from 'next/navigation'
-import { Loader2 } from 'lucide-react' // Optional: install lucide-react for icons, or replace with SVG
+import { Loader2, Eye, EyeOff, AlertCircle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [rememberMe, setRememberMe] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   
@@ -34,29 +37,38 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-neutral-950 px-4 transition-colors duration-300">
-      
-      {/* Minimal Card Container */}
-      <div className="w-full max-w-sm space-y-8 bg-white dark:bg-neutral-900 p-8 rounded-2xl border border-gray-200 dark:border-neutral-800 shadow-sm dark:shadow-none">
-        
-        {/* Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Welcome back
-          </h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Sign in to access your dashboard
-          </p>
-        </div>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
+      {/* Animated gradient background */}
+      <div className="fixed inset-0 -z-10 rora-animated-bg" />
 
-        {/* Form */}
-        <form onSubmit={handleLogin} className="mt-8 space-y-6">
-          <div className="space-y-5">
-            
+      {/* Login Card */}
+      <div className="w-full max-w-md">
+        <div className="bg-[#0a0f1a]/90 backdrop-blur-sm rounded-2xl border border-[#1e293b] p-8 sm:p-10">
+          
+          {/* Header */}
+          <div className="text-center space-y-3 mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#f1f5f9]">
+              Welcome back
+            </h2>
+            <p className="text-sm text-[#94a3b8]">
+              Sign in to continue creating
+            </p>
+          </div>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-6 rounded-lg bg-[#7f1d1d]/20 border border-[#dc2626]/30 p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-[#dc2626] flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-[#fca5a5]">{error}</p>
+            </div>
+          )}
+
+          {/* Form */}
+          <form onSubmit={handleLogin} className="space-y-6">
             {/* Email Input */}
-            <div>
-              <label htmlFor="email" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
-                Email
+            <div className="space-y-2">
+              <label htmlFor="email" className="block text-sm font-medium text-[#94a3b8]">
+                Email address
               </label>
               <input
                 id="email"
@@ -66,70 +78,100 @@ export default function LoginPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
+                className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300"
                 placeholder="name@example.com"
               />
             </div>
 
             {/* Password Input */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="block text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-[#94a3b8]">
                   Password
                 </label>
-                {/* Optional: Forgot Password Link */}
                 <div className="text-xs">
-                  <a href="#" className="font-medium text-gray-900 dark:text-gray-200 hover:opacity-70">
+                  <a href="#" className="font-medium text-[#94a3b8] hover:text-[#f1f5f9] transition-colors">
                     Forgot?
                   </a>
                 </div>
               </div>
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 bg-[#111827] border border-[#334155] rounded-xl text-[#f1f5f9] placeholder-[#64748b] focus:outline-none focus:ring-2 focus:ring-[#14b8a6]/30 focus:border-[#14b8a6] transition-all duration-300 pr-12"
+                  placeholder="••••••••"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#64748b] hover:text-[#94a3b8] transition-colors p-1"
+                >
+                  {showPassword ? (
+                    <EyeOff className="w-5 h-5" />
+                  ) : (
+                    <Eye className="w-5 h-5" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Remember Me */}
+            <div className="flex items-center">
               <input
-                id="password"
-                name="password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="block w-full px-3 py-2.5 bg-gray-50 dark:bg-neutral-950 border border-gray-300 dark:border-neutral-800 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-gray-900 dark:focus:ring-white focus:border-transparent transition-colors text-sm"
-                placeholder="••••••••"
+                id="remember-me"
+                name="remember-me"
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-[#334155] bg-[#111827] text-[#14b8a6] focus:ring-[#14b8a6]/30 cursor-pointer"
               />
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-[#94a3b8] cursor-pointer">
+                Remember me
+              </label>
             </div>
-          </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="rounded-md bg-red-50 dark:bg-red-900/20 p-3">
-              <p className="text-sm text-red-800 dark:text-red-200">{error}</p>
-            </div>
-          )}
-
-          {/* Submit Button */}
-          <div>
-            <button
+            {/* Submit Button */}
+            <Button
               type="submit"
               disabled={loading}
-              className="group relative w-full flex justify-center py-2.5 px-4 border border-transparent text-sm font-semibold rounded-lg text-white bg-gray-900 dark:bg-white dark:text-black hover:bg-gray-800 dark:hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-900 dark:focus:ring-white disabled:opacity-50 transition-all duration-200"
+              variant="primary"
+              size="lg"
+              className="w-full"
             >
               {loading ? (
                 <>
-                  <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                  <Loader2 className="animate-spin -ml-1 mr-2 h-5 w-5" />
                   Signing in...
                 </>
               ) : (
                 'Sign in'
               )}
-            </button>
-          </div>
-        </form>
+            </Button>
+          </form>
 
-        {/* Signup Link */}
-        <div className="mt-4 text-center text-sm text-gray-600 dark:text-gray-400">
-          <span>Don’t have an account? </span>
-          <a href="/signup" className="font-medium text-gray-900 dark:text-gray-200 hover:opacity-80">
-            Sign up
-          </a>
+          {/* Divider */}
+          <div className="relative my-8">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-[#1e293b]" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-[#0a0f1a]/90 text-[#64748b]">or</span>
+            </div>
+          </div>
+
+          {/* Sign up Link */}
+          <div className="text-center text-sm text-[#94a3b8]">
+            <span>Don't have an account? </span>
+            <a href="/signup" className="font-medium text-[#f1f5f9] hover:text-[#14b8a6] transition-colors">
+              Sign up free
+            </a>
+          </div>
         </div>
       </div>
     </div>
